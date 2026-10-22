@@ -1,8 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from pathlib import Path
 import joblib
 import numpy as np
+
+MODEL_PATH = Path(__file__).resolve().parent / "model.pkl"
 
 # 1. Dictionary to hold our loaded model in memory
 ml_model = {}
@@ -11,8 +14,8 @@ ml_model = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Runs ONCE when the server starts up
-    ml_model["predictor"] = joblib.load("model.pkl")
-    print("Model loaded successfully")
+    ml_model["predictor"] = joblib.load(MODEL_PATH)
+    print(f"Model loaded successfully from {MODEL_PATH}")
     yield
     # Runs ONCE when the server shuts down (cleanup)
     ml_model.clear()

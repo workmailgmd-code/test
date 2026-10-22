@@ -1,7 +1,8 @@
+import os
 import streamlit as st
 import requests
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").rstrip("/")
 
 st.set_page_config(
     page_title="Student Predictor",
@@ -36,32 +37,38 @@ st.markdown("---")
 
 # Predict Button
 if st.button("🔍 Predict Result", use_container_width=True):
-    # Call the FastAPI backend endpoint
-    response = requests.post(
-        f"{API_URL}/predict",
-        json={"study_hours": study_hours, "prev_score": prev_score}
-    )
-    
-    if response.status_code == 200:
+    try:
+        # Call the FastAPI backend endpoint
+        response = requests.post(
+            f"{API_URL}/predict",
+            json={"study_hours": study_hours, "prev_score": prev_score},
+            timeout=10,
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        st.error(
+            f"Could not reach the prediction API at {API_URL}. "
+            "Make sure the FastAPI backend is running and set the API_URL environment variable if needed. "
+            f"Error: {exc}"
+        )
+    else:
         result = response.json()
-        
+
         # Display Pass/Fail result prominently
         if result["prediction"] == 1:
             st.success(f"🎉 Result: **{result['result_label']}**")
         else:
             st.error(f"⚠️ Result: **{result['result_label']}**")
-            
+
         # Show model confidence
         st.metric(
             label="Model Confidence",
             value=f"{result['confidence'] * 100:.1f}%"
         )
-        
+
         # Raw response expander
         with st.expander("See raw API response"):
             st.json(result)
-    else:
-        st.error("Could not reach the prediction API. Is FastAPI running?")
 
 # Live input summary
 st.markdown("---")
